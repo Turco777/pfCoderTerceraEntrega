@@ -1,6 +1,8 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { Strategy as JWTStrategy, ExtractJwt } from "passport-jwt";
+import GitHubStrategy from "passport-github2";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 
 import { usersService, cartsService } from "../services/index.js";
 import authService from "../services/authService.js";
@@ -100,6 +102,83 @@ const initializePassportStrategies = () => {
       }
     )
   );
+
+  passport.use(
+    "github",
+    new GitHubStrategy(
+      {
+        clientID: config.github.CLIENT_ID,
+        clientSecret: config.github.CLIENT_SECRET,
+        callbackURL: "http://localhost:8080/api/sessions/githubcallback",
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          const email = profile._json.email;
+
+          let user = await usersService.getUserBy({ email });
+
+          if (!user) {
+            const newUser = {
+              first_name: profile._json.name,
+              last_name: "",
+              age: "",
+              email,
+              password: "",
+              admin: false,
+            };
+            const createdUser = await usersService.createUser(newUser);
+            return done(null, createdUser);
+          } else {
+            return done(null, user);
+          }
+        } catch (err) {
+          return done(err);
+        }
+      }
+    )
+  );
+  passport.use(
+    "google",
+    new GoogleStrategy(
+      {
+        clientID: config.google.CLIENT_ID,
+        clientSecret: config.google.CLIENT_SECRET,
+        callbackURL: "http://localhost:8080/api/sessions/googlecallback",
+        passReqToCallback: true,
+      },
+      async (req, accessToken, refreshToken, profile, done) => {
+        const { _json } = profile;
+        const user = await usersService.getUserBy({ email: _json.email });
+        if (user) {
+          return done(null, user);
+        } else {
+          const newUser = {
+            firstName: _json.given_name,
+            lastName: _json.family_name,
+            email: _json.email,
+          };
+          let cart;
+
+          if (req.cookies["cart"]) {
+            cart = req.cookies["cart"];
+          } else {
+            const cartResult = await cartsService.createCart();
+            cart = cartResult.id;
+          }
+
+          newUser.cart = cart;
+          const result = await usersService.createUser(newUser);
+          return done(null, result);
+        }
+      }
+    )
+  );
+  passport.serializeUser((user, done) => {
+    done(null, user._id);
+  });
+  passport.deserializeUser((user, done) => {
+    done(null, user);
+  });
 };
 
 export default initializePassportStrategies;
