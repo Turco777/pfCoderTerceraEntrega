@@ -1,5 +1,9 @@
 import BaseRouter from "./BaseRouter.js";
-import { productsService, cartsService } from "../services/index.js";
+import {
+  productsService,
+  cartsService,
+  ticketsService,
+} from "../services/index.js";
 
 import { getValidFilters } from "../utils.js";
 
@@ -55,8 +59,11 @@ class ViewsRouter extends BaseRouter {
 
     this.get("/cart", ["AUTH"], async (req, res) => {
       const cart = await cartsService.getCartById(req.user._id);
-      console.log(cart);
-      return res.render("cart");
+      return res.render("cart", { cart });
+    });
+    this.get("/purchase", ["AUTH"], async (req, res) => {
+      const ticket = await ticketsService.getTicketsBy(req.user.cart._id);
+      return res.render("purchase", { ticket });
     });
   }
 }

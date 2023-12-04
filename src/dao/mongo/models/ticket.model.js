@@ -1,7 +1,5 @@
 import mongoose from "mongoose";
 
-const codeTicket = () => Date.now().toString(15);
-
 const collection = "tickets";
 
 const schema = new mongoose.Schema(
@@ -10,12 +8,15 @@ const schema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      codeTicket,
     },
     purchase_datetime: {
       type: Date,
       required: true,
-      default: Date.now,
+      default: new Date().toISOString(),
+    },
+    amount: {
+      type: Number,
+      required: true,
     },
     purchaser: {
       type: String,
@@ -23,14 +24,21 @@ const schema = new mongoose.Schema(
     },
     amount: {
       type: Number,
-      required:true
+      required: true,
+    },
+    products: {
+      type: Array,
+      default: [],
+    },
+    active: {
+      type: Boolean,
+      default: true,
     },
   },
   {
     timestamps: true,
   }
 );
-
 
 const ticketModel = mongoose.model(collection, schema);
 
